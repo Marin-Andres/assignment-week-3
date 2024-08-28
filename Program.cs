@@ -1,6 +1,5 @@
 ﻿using EntityModels.Models;
 using Microsoft.EntityFrameworkCore;
-using System.Security.Cryptography.X509Certificates;
 using Week3EntityFramework.Dtos;
 
 var context = new IndustryConnectWeek2Context();
@@ -41,8 +40,7 @@ var context = new IndustryConnectWeek2Context();
 
 
 
-var sales = context.Sales.Include(c => c.Customer)
-    .Include(p => p.Product).ToList();
+var sales = context.Sales.Include(c => c.Customer).Include(p => p.Product).ToList();
 
 var salesDto = new List<SaleDto>();
 
@@ -50,8 +48,6 @@ foreach (Sale s in sales)
 {
     salesDto.Add(new SaleDto(s));
 }
-
-
 
 //context.Sales.Add(new Sale
 //{
@@ -112,31 +108,15 @@ foreach (Sale s in sales)
 //	FROM Sale
 //)
 
-//get inner query first
-var customersIDWithSales = context.Sales.
-    Select(s => s.CustomerId).
-    ToList();
+var customersWithoutSales = context
+    .Customers.Where(customer => !context.Sales.Any(s => s.CustomerId == customer.Id))
+    .ToList();
 
-//get outer query
-var customers = context.Customers.ToList();
-
-//filter out customers in sales table
-var customersWithoutSales = new List<Customer>();
-
-foreach (var c in customers)
-{
-    if (!customersIDWithSales.Contains(c.Id))
-    {
-        customersWithoutSales.Add(c);
-    }
-}
-    
 //printout to console
 foreach (var c in customersWithoutSales)
 {
-	Console.WriteLine($"Customer {c.FirstName} {c.LastName} does not have any sale");
+    Console.WriteLine($"Customer {c.FirstName} {c.LastName} does not have any sale");
 }
-
 
 //2. Insert a new customer with a sale record
 // Request Customer information, Product and Store IDs. Assuming current date.
@@ -179,18 +159,18 @@ var purchaseResponse = Console.ReadLine();
 
 if (purchaseResponse?.ToLower() == "y")
 {
-	sale.DateSold = DateTime.Now;
+    sale.DateSold = DateTime.Now;
 }
 else
 {
-	Console.Write("Please enter purchase date:");
-	sale.DateSold = Convert.ToDateTime(Console.ReadLine());
+    Console.Write("Please enter purchase date:");
+    sale.DateSold = Convert.ToDateTime(Console.ReadLine());
 }
 
 context.Sales.Add(sale);
 context.SaveChanges();
 
-//3. Add a new store 
+//3. Add a new store
 // Request Store Name, Location and Continent and add new store
 
 var store = new Store();
@@ -211,32 +191,22 @@ store.Continent = Console.ReadLine();
 context.Stores.Add(store);
 context.SaveChanges();
 
-//4. Find the list of all stores that have sales 
+//4. Find the list of all stores that have sales
 //Equivalent SQL query to get store names with sales
-//SELECT DISTINCT Store.Name, Store.Location 
+//SELECT DISTINCT Store.Name, Store.Location
 //FROM Sale
-//JOIN Store 
+//JOIN Store
 //ON Store.Id = Sale.StoreId
 //WHERE Sale.StoreId IS NOT NULL;
-var storesWithSales = context.Sales.
-    Join(context.Stores, sale => sale.StoreId, store => store.Id, (sale, store) => new { StoreName = store.Name, StoreLocation = store.Location }).
-    Distinct().
-    ToList();
+var storesWithSales = context
+    .Stores.Where(store => context.Sales.Any(s => s.StoreId == store.Id))
+    .ToList();
 
 Console.WriteLine();
 
 foreach (var s in storesWithSales)
 {
-    Console.WriteLine($"Store {s.StoreName} located in {s.StoreLocation} has some sales");
+    Console.WriteLine($"Store {s.Name} located in {s.Location} has some sales");
 }
 
 Console.ReadLine();
-
-
-
-
-
-
-
-
-
